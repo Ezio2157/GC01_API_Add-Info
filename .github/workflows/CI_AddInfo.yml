@@ -1,17 +1,18 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+# Este workflow instala dependencias, ejecuta pruebas y realiza análisis con SonarCloud
 
-name: Install Dependencies and Run Tests
+name: CI Pipeline
 
 on:
   push:
     branches:
       - '**'
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
+  # Job para instalar dependencias
   install-dependencies:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -26,10 +27,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+  # Job para ejecutar pruebas
   run-tests:
     runs-on: ubuntu-latest
     needs: install-dependencies
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -46,3 +47,20 @@ jobs:
 
       - name: Run tests with tox
         run: tox
+
+  # Job para análisis en SonarCloud
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [install-dependencies]  # SonarCloud requiere que las dependencias estén instaladas previamente
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be deshabilitados para un mejor análisis
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Necesario para obtener información de PR, si aplica
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
